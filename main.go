@@ -38,6 +38,7 @@ func main() {
 			}
 			file.DeleteExp(&exp, id)
 		case "list":
+			file.ListExp(&exp)
 		case "summary":
 			//month
 		case "set":

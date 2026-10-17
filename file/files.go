@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Nepsteren/CLI_FinanceTracker.git/model"
@@ -70,6 +71,14 @@ func DeleteExp(exp *[]model.Expence, id int) {
 		WriteFile(exp)
 	} else {
 		fmt.Println("id not exist")
+	}
+}
+
+func ListExp(exp *[]model.Expence) {
+	fmt.Printf("%-4s %-20s %10s %-12s\n", "ID", "DESC", "AMOUNT", "DATE")
+	fmt.Println(strings.Repeat("-", 80))
+	for _, e := range *exp {
+		fmt.Printf("%-4d %-20s %10.2f %-12s\n", e.Id, e.Desc, e.Amount, e.Date.Format("2006-01-02 15:04"))
 	}
 }
 
