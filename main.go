@@ -2,22 +2,32 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"os"
+	"strings"
 
+	"github.com/Nepsteren/CLI_FinanceTracker.git/file"
+	"github.com/Nepsteren/CLI_FinanceTracker.git/model"
 	"github.com/Nepsteren/CLI_FinanceTracker.git/output"
 )
 
-func main() {
-	scanner := bufio.NewScanner(os.Stdin)
+var exp []model.Expence
 
+func main() {
+	file.GetExpenses(&exp)
+	scanner := bufio.NewScanner(os.Stdin)
 	for {
-		fmt.Print("$ expence-tracker > ")
+		output.Start()
 
 		scanner.Scan()
-		cmd := scanner.Text()
+		input := scanner.Text()
+
+		flags := strings.Split(input, " ")
+		cmd := flags[0]
+
 		switch cmd {
 		case "add":
+			desk, amount := file.AddCheckFlags(flags)
+			file.AddExpence(&exp, desk, amount)
 		case "update":
 		case "delete":
 		case "list":
@@ -29,6 +39,9 @@ func main() {
 			output.PrintHelp()
 		case "q":
 			return
+		default:
+			output.InvalidCmd(cmd)
 		}
+
 	}
 }

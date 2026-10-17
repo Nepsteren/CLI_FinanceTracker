@@ -2,6 +2,14 @@ package output
 
 import "fmt"
 
+func Start() {
+	fmt.Print("$ expence-tracker > ")
+}
+
+func InvalidCmd(cmd string){
+	fmt.Println("unknown command -", cmd)
+}
+
 func PrintHelp() {
 	fmt.Println("Список команд:")
 	fmt.Println("add (description, amount) - добавить расход")
