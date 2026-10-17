@@ -85,12 +85,34 @@ func ListExp(exp *[]model.Expence) {
 	}
 }
 
-func ListSummary(exp *[]model.Expence) {
-	sum := 0.0
-	for i := 0; i < len((*exp)); i++ {
-		sum += (*exp)[i].Amount
+func SummaryChecksFlags(flags []string) (string, bool) {
+	if len(flags) > 2 {
+		if flags[1] == "--month" {
+			return flags[2], true
+		}
+	} else {
+		return "", false
 	}
-	fmt.Printf("total expenses: $%.2f\n", sum)
+	return "", false
+}
+
+func ListSummary(exp *[]model.Expence, month string, withMonth bool) {
+	sum := 0.0
+	if !withMonth {
+		for i := 0; i < len((*exp)); i++ {
+			sum += (*exp)[i].Amount
+		}
+		fmt.Printf("total expenses: $%.2f\n", sum)
+	} else {
+		for i := 0; i < len((*exp)); i++ {
+			if (*exp)[i].Date.Format("1") == month {
+				sum += (*exp)[i].Amount
+			}
+
+		}
+		fmt.Printf("total expenses %s: $%.2f\n", month, sum)
+	}
+
 }
 
 func DeleteChecksFlags(flags []string) int {

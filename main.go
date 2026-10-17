@@ -30,6 +30,7 @@ func main() {
 			desk, amount := file.AddCheckFlags(flags)
 			file.AddExp(&exp, desk, amount)
 		case "update":
+
 		case "delete":
 			id := file.DeleteChecksFlags(flags)
 			if id == -1 {
@@ -40,8 +41,8 @@ func main() {
 		case "list":
 			file.ListExp(&exp)
 		case "summary":
-			//month add AFTER ALL MAYBE
-			file.ListSummary(&exp)
+			month, withMonth := file.SummaryChecksFlags(flags)
+			file.ListSummary(&exp, month, withMonth)
 		case "set":
 		case "export":
 		case "help":
