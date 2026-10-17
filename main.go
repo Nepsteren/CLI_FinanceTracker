@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 
@@ -27,9 +28,15 @@ func main() {
 		switch cmd {
 		case "add":
 			desk, amount := file.AddCheckFlags(flags)
-			file.AddExpence(&exp, desk, amount)
+			file.AddExp(&exp, desk, amount)
 		case "update":
 		case "delete":
+			id := file.DeleteChecksFlags(flags)
+			if id == -1 {
+				fmt.Println("not such a task")
+				break
+			}
+			file.DeleteExp(&exp, id)
 		case "list":
 		case "summary":
 			//month

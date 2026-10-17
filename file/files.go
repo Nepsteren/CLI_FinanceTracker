@@ -2,6 +2,7 @@ package file
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -42,7 +43,16 @@ func NextId(exp *[]model.Expence) int {
 	return id
 }
 
-func AddExpence(expences *[]model.Expence, desc string, amount float64) {
+func SearchExp(exp *[]model.Expence, id int) int {
+	for i := 0; i < len(*exp); i++ {
+		if (*exp)[i].Id == id {
+			return i
+		}
+	}
+	return -1
+}
+
+func AddExp(expences *[]model.Expence, desc string, amount float64) {
 	exp := append(*expences, model.Expence{
 		Id:     NextId(expences),
 		Desc:   desc,
@@ -51,6 +61,28 @@ func AddExpence(expences *[]model.Expence, desc string, amount float64) {
 	})
 
 	WriteFile(&exp)
+}
+
+func DeleteExp(exp *[]model.Expence, id int) {
+	SearchExp(exp, id)
+	if id > -1 {
+		*exp = append((*exp)[0:id], (*exp)[id+1:]...)
+		WriteFile(exp)
+	} else {
+		fmt.Println("id not exist")
+	}
+}
+
+func DeleteChecksFlags(flags []string) int {
+	if flags[1] == "--id" && len(flags) > 2 {
+		id, err := strconv.Atoi(flags[2])
+		if err != nil {
+			fmt.Println("incorrect id")
+			return -1
+		}
+		return id
+	}
+	return -1
 }
 
 func AddCheckFlags(flags []string) (string, float64) {
