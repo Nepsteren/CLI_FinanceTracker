@@ -54,13 +54,15 @@ func SearchExp(exp *[]model.Expence, id int) int {
 }
 
 func AddExp(expences *[]model.Expence, desc string, amount float64) {
+	id := NextId(expences)
 	exp := append(*expences, model.Expence{
-		Id:     NextId(expences),
+		Id:     id,
 		Desc:   desc,
 		Amount: amount,
 		Date:   time.Now(),
 	})
 
+	fmt.Println("expense added successfully -", id)
 	WriteFile(&exp)
 }
 
@@ -68,6 +70,7 @@ func DeleteExp(exp *[]model.Expence, id int) {
 	SearchExp(exp, id)
 	if id > -1 {
 		*exp = append((*exp)[0:id], (*exp)[id+1:]...)
+		fmt.Println("expense deleted successfully -", id)
 		WriteFile(exp)
 	} else {
 		fmt.Println("id not exist")
@@ -80,6 +83,14 @@ func ListExp(exp *[]model.Expence) {
 	for _, e := range *exp {
 		fmt.Printf("%-4d %-20s %10.2f %-12s\n", e.Id, e.Desc, e.Amount, e.Date.Format("2006-01-02 15:04"))
 	}
+}
+
+func ListSummary(exp *[]model.Expence) {
+	sum := 0.0
+	for i := 0; i < len((*exp)); i++ {
+		sum += (*exp)[i].Amount
+	}
+	fmt.Printf("total expenses: $%.2f\n", sum)
 }
 
 func DeleteChecksFlags(flags []string) int {

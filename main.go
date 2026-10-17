@@ -40,7 +40,8 @@ func main() {
 		case "list":
 			file.ListExp(&exp)
 		case "summary":
-			//month
+			//month add AFTER ALL MAYBE
+			file.ListSummary(&exp)
 		case "set":
 		case "export":
 		case "help":
