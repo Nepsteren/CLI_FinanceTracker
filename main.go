@@ -14,7 +14,7 @@ import (
 var exp []model.Expence
 
 func main() {
-	file.GetExpenses(&exp)
+	file.Load(&exp)
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		output.Start()
@@ -30,6 +30,12 @@ func main() {
 			desk, amount := file.AddCheckFlags(flags)
 			file.AddExp(&exp, desk, amount)
 		case "update":
+			id, desc, amount := file.UpdateChecksFlags(flags)
+			if id != -1 {
+				file.UpdateExp(&exp, id, desc, amount)
+			} else {
+				fmt.Printf("incorrect id - %d\n", id)
+			}
 
 		case "delete":
 			id := file.DeleteChecksFlags(flags)

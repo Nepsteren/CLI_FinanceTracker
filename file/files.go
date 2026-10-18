@@ -15,7 +15,7 @@ import (
 
 var path string = "expense.json"
 
-func GetExpenses(exp *[]model.Expence) {
+func Load(exp *[]model.Expence) {
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -64,6 +64,65 @@ func AddExp(expences *[]model.Expence, desc string, amount float64) {
 
 	fmt.Println("expense added successfully -", id)
 	WriteFile(&exp)
+}
+
+func UpdateChecksFlags(flags []string) (int, string, float64) {
+	var desk string
+	var amount float64
+	var Id int
+
+	var foundDesk bool
+	var foundAmount bool
+	var foundId bool
+
+	for i := 1; i < len(flags); i++ {
+		if flags[i] == "--description" && len(flags) > i+1 {
+			desk = flags[i+1]
+			foundDesk = true
+		} else if flags[i] == "--amount" && len(flags) > i+1 {
+			amount, _ = strconv.ParseFloat(flags[i+1], 64)
+			foundAmount = true
+		} else if flags[i] == "--id" && len(flags) > i+1 {
+			foundId = true
+			id, err := strconv.Atoi(flags[i+1])
+			if err != nil {
+				log.Fatal(err)
+			}
+			Id = id
+		}
+
+	}
+
+	if foundId {
+		if foundAmount && foundDesk {
+			return Id, desk, amount
+		}
+
+		if foundAmount {
+			return Id, "", amount
+		}
+
+		if foundDesk {
+			return Id, desk, -1
+		}
+	}
+
+	return -1, "", 0
+}
+
+func UpdateExp(exp *[]model.Expence, id int, desk string, amount float64) {
+	for i := 0; i < len((*exp)); i++ {
+		if (*exp)[i].Id == id {
+			if desk != "" {
+				(*exp)[i].Desc = desk
+			}
+			if (*exp)[i].Amount == -1 {
+				(*exp)[i].Amount = amount
+			}
+		}
+	}
+	WriteFile(exp)
+
 }
 
 func DeleteExp(exp *[]model.Expence, id int) {
