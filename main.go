@@ -53,6 +53,7 @@ func main() {
 		case "set":
 			budget = file.SetBudget(flags)
 		case "export":
+			file.Export(&exp)
 		case "help":
 			output.PrintHelp()
 		case "q":

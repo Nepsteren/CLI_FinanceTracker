@@ -1,6 +1,7 @@
 package file
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +16,7 @@ import (
 
 var path string = "expense.json"
 var pathBudget string = "budget.json"
+var pathExport string = "expences.csv"
 
 func Load(exp *[]model.Expence) {
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
@@ -76,6 +78,50 @@ func SearchExp(exp *[]model.Expence, id int) int {
 		}
 	}
 	return -1
+}
+
+func Export(epx *[]model.Expence) {
+	f, err := os.Create(pathExport)
+
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	defer f.Close()
+
+	w := csv.NewWriter(f)
+
+	defer func() {
+		w.Flush()
+		if err := w.Error(); err != nil {
+			log.Printf("csv flush error: %v", err)
+		}
+	}()
+
+	if err := w.Write([]string{"Id", "Description", "Amount", "Date"}); err != nil {
+		log.Print(err)
+		return
+	}
+
+	for _, e := range *epx {
+		row := []string{
+			strconv.Itoa(e.Id),
+			e.Desc,
+			strconv.FormatFloat(e.Amount, 'f', 2, 64),
+			e.Date.Format("2006-01-02 15:04:05"),
+		}
+		if err := w.Write(row); err != nil {
+			log.Print(err)
+			return
+		}
+
+	}
+	if err := w.Error(); err != nil {
+		log.Print(err)
+		return
+	}
+
 }
 
 func SetBudget(flags []string) float64 {
