@@ -12,9 +12,11 @@ import (
 )
 
 var exp []model.Expence
+var budget float64
 
 func main() {
 	file.Load(&exp)
+	file.LoadBudget(&budget)
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		output.Start()
@@ -36,7 +38,6 @@ func main() {
 			} else {
 				fmt.Printf("incorrect id - %d\n", id)
 			}
-
 		case "delete":
 			id := file.DeleteChecksFlags(flags)
 			if id == -1 {
@@ -48,8 +49,9 @@ func main() {
 			file.ListExp(&exp)
 		case "summary":
 			month, withMonth := file.SummaryChecksFlags(flags)
-			file.ListSummary(&exp, month, withMonth)
+			file.ListSummary(&exp, month, withMonth, budget)
 		case "set":
+			budget = file.SetBudget(flags)
 		case "export":
 		case "help":
 			output.PrintHelp()

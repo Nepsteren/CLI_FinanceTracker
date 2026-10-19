@@ -14,6 +14,7 @@ import (
 )
 
 var path string = "expense.json"
+var pathBudget string = "budget.json"
 
 func Load(exp *[]model.Expence) {
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
@@ -28,6 +29,30 @@ func Load(exp *[]model.Expence) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func LoadBudget(budget *float64) {
+	f, err := os.OpenFile(pathBudget, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	data, err := io.ReadAll(f)
+
+	err = json.Unmarshal(data, &budget)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func WriteFileB(budget *float64) {
+	data, err := json.MarshalIndent(&budget, "", " ")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	os.WriteFile(pathBudget, data, 0644)
 }
 
 func WriteFile(exp *[]model.Expence) {
@@ -51,6 +76,20 @@ func SearchExp(exp *[]model.Expence, id int) int {
 		}
 	}
 	return -1
+}
+
+func SetBudget(flags []string) float64 {
+	budget := 0.0
+	if len(flags) >= 2 {
+		bud, err := strconv.ParseFloat(flags[1], 64)
+		if err != nil {
+			fmt.Printf("incorrect budget - %d\n", budget)
+			return -1
+		}
+		budget = bud
+		WriteFileB(&budget)
+	}
+	return budget
 }
 
 func AddExp(expences *[]model.Expence, desc string, amount float64) {
@@ -155,11 +194,14 @@ func SummaryChecksFlags(flags []string) (string, bool) {
 	return "", false
 }
 
-func ListSummary(exp *[]model.Expence, month string, withMonth bool) {
+func ListSummary(exp *[]model.Expence, month string, withMonth bool, busget float64) {
 	sum := 0.0
 	if !withMonth {
 		for i := 0; i < len((*exp)); i++ {
 			sum += (*exp)[i].Amount
+		}
+		if busget < sum {
+			fmt.Printf("ваш бюджет на месяц был превышен!! превышение на %0.2f$\n", sum-busget)
 		}
 		fmt.Printf("total expenses: $%.2f\n", sum)
 	} else {
@@ -169,6 +211,7 @@ func ListSummary(exp *[]model.Expence, month string, withMonth bool) {
 			}
 
 		}
+
 		fmt.Printf("total expenses %s: $%.2f\n", month, sum)
 	}
 
