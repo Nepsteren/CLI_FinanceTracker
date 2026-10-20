@@ -2,8 +2,6 @@ package model
 
 import "time"
 
-
-
 type Expence struct {
 	Id     int
 	Desc   string

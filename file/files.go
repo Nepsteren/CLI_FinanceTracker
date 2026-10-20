@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"strconv"
@@ -19,56 +18,63 @@ var pathBudget string = "budget.json"
 var pathExport string = "expences.csv"
 
 func Load(exp *[]model.Expence) {
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	data, err := io.ReadAll(f)
-
-	err = json.Unmarshal(data, &exp)
-	if err != nil {
-		log.Fatal(err)
-	}
+	loadJSON(path, exp)
 }
 
 func LoadBudget(budget *float64) {
-	f, err := os.OpenFile(pathBudget, os.O_RDWR|os.O_CREATE, 0644)
+	loadJSON(pathBudget, budget)
+}
+
+func loadJSON(filePath string, target any) {
+	data, err := os.ReadFile(filePath)
 	if err != nil {
-		log.Fatal(err)
+		if os.IsNotExist(err) {
+			return
+		}
+
+		log.Printf("file read error: %v", err)
+		return
 	}
-	defer f.Close()
 
-	data, err := io.ReadAll(f)
+	if len(data) == 0 {
+		return
+	}
 
-	err = json.Unmarshal(data, &budget)
+	if err := json.Unmarshal(data, target); err != nil {
+		log.Printf("json unmarshal error: %v", err)
+	}
+}
+
+func saveJSON(filePath string, data any) {
+	content, err := json.MarshalIndent(data, "", " ")
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("json marshal error: %v", err)
+		return
+	}
+
+	if err := os.WriteFile(filePath, content, 0644); err != nil {
+		log.Printf("file write error: %v", err)
 	}
 }
 
 func WriteFileB(budget *float64) {
-	data, err := json.MarshalIndent(&budget, "", " ")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	os.WriteFile(pathBudget, data, 0644)
+	saveJSON(pathBudget, budget)
 }
 
 func WriteFile(exp *[]model.Expence) {
-	data, err := json.MarshalIndent(exp, "", " ")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	os.WriteFile(path, data, 0644)
+	saveJSON(path, exp)
 }
 
 func NextId(exp *[]model.Expence) int {
-	id := len(*exp)
-	return id
+	maxID := -1
+
+	for _, e := range *exp {
+		if e.Id > maxID {
+			maxID = e.Id
+		}
+	}
+
+	return maxID + 1
 }
 
 func SearchExp(exp *[]model.Expence, id int) int {
@@ -140,7 +146,7 @@ func SetBudget(flags []string) float64 {
 
 func AddExp(expences *[]model.Expence, desc string, amount float64) {
 	id := NextId(expences)
-	exp := append(*expences, model.Expence{
+	*expences = append(*expences, model.Expence{
 		Id:     id,
 		Desc:   desc,
 		Amount: amount,
@@ -148,7 +154,7 @@ func AddExp(expences *[]model.Expence, desc string, amount float64) {
 	})
 
 	fmt.Println("expense added successfully -", id)
-	WriteFile(&exp)
+	WriteFile(expences)
 }
 
 func UpdateChecksFlags(flags []string) (int, string, float64) {
@@ -168,12 +174,13 @@ func UpdateChecksFlags(flags []string) (int, string, float64) {
 			amount, _ = strconv.ParseFloat(flags[i+1], 64)
 			foundAmount = true
 		} else if flags[i] == "--id" && len(flags) > i+1 {
-			foundId = true
 			id, err := strconv.Atoi(flags[i+1])
 			if err != nil {
-				log.Fatal(err)
+				fmt.Println("incorrect id")
+				return -1, "", 0
 			}
 			Id = id
+			foundId = true
 		}
 
 	}
@@ -196,29 +203,36 @@ func UpdateChecksFlags(flags []string) (int, string, float64) {
 }
 
 func UpdateExp(exp *[]model.Expence, id int, desk string, amount float64) {
-	for i := 0; i < len((*exp)); i++ {
-		if (*exp)[i].Id == id {
-			if desk != "" {
-				(*exp)[i].Desc = desk
-			}
-			if (*exp)[i].Amount == -1 {
-				(*exp)[i].Amount = amount
-			}
-		}
+	index := SearchExp(exp, id)
+
+	if index == -1 {
+		fmt.Println("expense not found")
+		return
 	}
+
+	if desk != "" {
+		(*exp)[index].Desc = desk
+	}
+
+	if amount != -1 {
+		(*exp)[index].Amount = amount
+	}
+
 	WriteFile(exp)
 
 }
 
 func DeleteExp(exp *[]model.Expence, id int) {
-	SearchExp(exp, id)
-	if id > -1 {
-		*exp = append((*exp)[0:id], (*exp)[id+1:]...)
-		fmt.Println("expense deleted successfully -", id)
-		WriteFile(exp)
-	} else {
-		fmt.Println("id not exist")
+	index := SearchExp(exp, id)
+
+	if index == -1 {
+		fmt.Println("expence not found")
+		return
 	}
+
+	*exp = append((*exp)[:index], (*exp)[index+1:]...)
+	fmt.Println("expense deleted successfully -", id)
+	WriteFile(exp)
 }
 
 func ListExp(exp *[]model.Expence) {
@@ -264,7 +278,7 @@ func ListSummary(exp *[]model.Expence, month string, withMonth bool, busget floa
 }
 
 func DeleteChecksFlags(flags []string) int {
-	if flags[1] == "--id" && len(flags) > 2 {
+	if len(flags) > 2 && flags[1] == "--id" {
 		id, err := strconv.Atoi(flags[2])
 		if err != nil {
 			fmt.Println("incorrect id")
