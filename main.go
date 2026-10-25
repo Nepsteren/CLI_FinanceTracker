@@ -4,14 +4,13 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/Nepsteren/CLI_FinanceTracker.git/file"
 	"github.com/Nepsteren/CLI_FinanceTracker.git/model"
 	"github.com/Nepsteren/CLI_FinanceTracker.git/output"
 )
 
-var exp []model.Expence
+var exp []model.Expense
 var budget float64
 
 func main() {
@@ -24,27 +23,47 @@ func main() {
 		scanner.Scan()
 		input := scanner.Text()
 
-		flags := strings.Split(input, " ")
+		flags, err := parseInput(input)
+
+		if err != nil {
+			fmt.Println("incorrect command:", err)
+			continue
+		}
+
+		if len(flags) == 0 {
+			continue
+		}
+
 		cmd := flags[0]
 
 		switch cmd {
 		case "add":
-			desk, amount := file.AddCheckFlags(flags)
-			file.AddExp(&exp, desk, amount)
-		case "update":
-			id, desc, amount := file.UpdateChecksFlags(flags)
-			if id != -1 {
-				file.UpdateExp(&exp, id, desc, amount)
-			} else {
-				fmt.Printf("incorrect id - %d\n", id)
-			}
-		case "delete":
-			id := file.DeleteChecksFlags(flags)
-			if id == -1 {
-				fmt.Println("not such a task")
+			desk, amount, err := file.AddCheckFlags(flags)
+			if err != nil {
+				fmt.Println("incorrect arguments:", err)
 				break
 			}
+			file.AddExp(&exp, desk, amount)
+		case "update":
+			update, err := file.UpdateChecksFlags(flags)
+			if err != nil {
+				fmt.Println("incorrect arguments:", err)
+				break
+			}
+
+			if err := file.UpdateExp(&exp, update); err != nil {
+				fmt.Println("incorrect arguments:", err)
+				break
+			}
+		case "delete":
+			id, err := file.DeleteChecksFlags(flags)
+			if err != nil {
+				fmt.Println("incorrect arguments:", err)
+				break
+			}
+
 			file.DeleteExp(&exp, id)
+
 		case "list":
 			file.ListExp(&exp)
 		case "summary":

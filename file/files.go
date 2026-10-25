@@ -17,7 +17,7 @@ var path string = "expense.json"
 var pathBudget string = "budget.json"
 var pathExport string = "expences.csv"
 
-func Load(exp *[]model.Expence) {
+func Load(exp *[]model.Expense) {
 	loadJSON(path, exp)
 }
 
@@ -61,11 +61,11 @@ func WriteFileB(budget *float64) {
 	saveJSON(pathBudget, budget)
 }
 
-func WriteFile(exp *[]model.Expence) {
+func WriteFile(exp *[]model.Expense) {
 	saveJSON(path, exp)
 }
 
-func NextId(exp *[]model.Expence) int {
+func NextId(exp *[]model.Expense) int {
 	maxID := -1
 
 	for _, e := range *exp {
@@ -77,7 +77,7 @@ func NextId(exp *[]model.Expence) int {
 	return maxID + 1
 }
 
-func SearchExp(exp *[]model.Expence, id int) int {
+func SearchExp(exp *[]model.Expense, id int) int {
 	for i := 0; i < len(*exp); i++ {
 		if (*exp)[i].Id == id {
 			return i
@@ -86,7 +86,7 @@ func SearchExp(exp *[]model.Expence, id int) int {
 	return -1
 }
 
-func Export(epx *[]model.Expence) {
+func Export(epx *[]model.Expense) {
 	f, err := os.Create(pathExport)
 
 	if err != nil {
@@ -135,7 +135,7 @@ func SetBudget(flags []string) float64 {
 	if len(flags) >= 2 {
 		bud, err := strconv.ParseFloat(flags[1], 64)
 		if err != nil {
-			fmt.Printf("incorrect budget - %d\n", budget)
+			fmt.Printf("incorrect budget - %.2f\n", budget)
 			return -1
 		}
 		budget = bud
@@ -144,9 +144,9 @@ func SetBudget(flags []string) float64 {
 	return budget
 }
 
-func AddExp(expences *[]model.Expence, desc string, amount float64) {
+func AddExp(expences *[]model.Expense, desc string, amount float64) {
 	id := NextId(expences)
-	*expences = append(*expences, model.Expence{
+	*expences = append(*expences, model.Expense{
 		Id:     id,
 		Desc:   desc,
 		Amount: amount,
@@ -157,72 +157,74 @@ func AddExp(expences *[]model.Expence, desc string, amount float64) {
 	WriteFile(expences)
 }
 
-func UpdateChecksFlags(flags []string) (int, string, float64) {
-	var desk string
-	var amount float64
-	var Id int
+func UpdateChecksFlags(args []string) (model.ExpenseUpdate, error) {
+	flags, err := ParseFlags(args)
 
-	var foundDesk bool
-	var foundAmount bool
-	var foundId bool
-
-	for i := 1; i < len(flags); i++ {
-		if flags[i] == "--description" && len(flags) > i+1 {
-			desk = flags[i+1]
-			foundDesk = true
-		} else if flags[i] == "--amount" && len(flags) > i+1 {
-			amount, _ = strconv.ParseFloat(flags[i+1], 64)
-			foundAmount = true
-		} else if flags[i] == "--id" && len(flags) > i+1 {
-			id, err := strconv.Atoi(flags[i+1])
-			if err != nil {
-				fmt.Println("incorrect id")
-				return -1, "", 0
-			}
-			Id = id
-			foundId = true
-		}
-
+	if err != nil {
+		return model.ExpenseUpdate{}, err
 	}
 
-	if foundId {
-		if foundAmount && foundDesk {
-			return Id, desk, amount
-		}
-
-		if foundAmount {
-			return Id, "", amount
-		}
-
-		if foundDesk {
-			return Id, desk, -1
-		}
+	if err := ValidateFlags(flags, "--id", "--description", "--amount"); err != nil {
+		return model.ExpenseUpdate{}, err
 	}
 
-	return -1, "", 0
+	idValue, exists := flags["--id"]
+	if !exists {
+		return model.ExpenseUpdate{}, fmt.Errorf("id is required")
+	}
+
+	id, err := strconv.Atoi(idValue)
+	if err != nil || id < 0 {
+		return model.ExpenseUpdate{}, fmt.Errorf("incorrect id")
+	}
+
+	update := model.ExpenseUpdate{
+		ID: id,
+	}
+
+	if desc, exists := flags["--description"]; exists {
+		if strings.TrimSpace(desc) == "" {
+			return model.ExpenseUpdate{}, fmt.Errorf("description cannot be empty")
+		}
+
+		update.Description = &desc
+	}
+
+	if amountValue, exists := flags["--amount"]; exists {
+		amount, err := strconv.ParseFloat(amountValue, 64)
+		if err != nil || amount < 0 {
+			return model.ExpenseUpdate{}, fmt.Errorf("incorrect amount")
+		}
+
+		update.Amount = &amount
+	}
+	if update.Description == nil && update.Amount == nil {
+		return model.ExpenseUpdate{}, fmt.Errorf("nothing to update")
+	}
+
+	return update, nil
 }
 
-func UpdateExp(exp *[]model.Expence, id int, desk string, amount float64) {
-	index := SearchExp(exp, id)
+func UpdateExp(expenses *[]model.Expense, update model.ExpenseUpdate) error {
+	index := SearchExp(expenses, update.ID)
 
 	if index == -1 {
-		fmt.Println("expense not found")
-		return
+		return fmt.Errorf("expense with id %d not found", update.ID)
+	}
+	if update.Description != nil {
+		(*expenses)[index].Desc = *update.Description
 	}
 
-	if desk != "" {
-		(*exp)[index].Desc = desk
+	if update.Amount != nil {
+		(*expenses)[index].Amount = *update.Amount
 	}
 
-	if amount != -1 {
-		(*exp)[index].Amount = amount
-	}
+	WriteFile(expenses)
 
-	WriteFile(exp)
-
+	return nil
 }
 
-func DeleteExp(exp *[]model.Expence, id int) {
+func DeleteExp(exp *[]model.Expense, id int) {
 	index := SearchExp(exp, id)
 
 	if index == -1 {
@@ -235,7 +237,7 @@ func DeleteExp(exp *[]model.Expence, id int) {
 	WriteFile(exp)
 }
 
-func ListExp(exp *[]model.Expence) {
+func ListExp(exp *[]model.Expense) {
 	fmt.Printf("%-4s %-20s %10s %-12s\n", "ID", "DESC", "AMOUNT", "DATE")
 	fmt.Println(strings.Repeat("-", 80))
 	for _, e := range *exp {
@@ -254,7 +256,7 @@ func SummaryChecksFlags(flags []string) (string, bool) {
 	return "", false
 }
 
-func ListSummary(exp *[]model.Expence, month string, withMonth bool, busget float64) {
+func ListSummary(exp *[]model.Expense, month string, withMonth bool, busget float64) {
 	sum := 0.0
 	if !withMonth {
 		for i := 0; i < len((*exp)); i++ {
@@ -277,47 +279,72 @@ func ListSummary(exp *[]model.Expence, month string, withMonth bool, busget floa
 
 }
 
-func DeleteChecksFlags(flags []string) int {
-	if len(flags) > 2 && flags[1] == "--id" {
-		id, err := strconv.Atoi(flags[2])
-		if err != nil {
-			fmt.Println("incorrect id")
-			return -1
-		}
-		return id
+func DeleteChecksFlags(args []string) (int, error) {
+	flags, err := ParseFlags(args)
+	if err != nil {
+		return 0, err
 	}
-	return -1
+
+	if err := ValidateFlags(flags, "--id"); err != nil {
+		return 0, err
+	}
+
+	idValue, exists := flags["--id"]
+	if !exists {
+		return 0, fmt.Errorf("id is required")
+	}
+
+	id, err := strconv.Atoi(idValue)
+	if err != nil || id < 0 {
+		return 0, fmt.Errorf("incorrect id")
+	}
+
+	return id, nil
 }
 
-func AddCheckFlags(flags []string) (string, float64) {
-	var desk string
-	var amount float64
-
-	var foundDesk bool
-	var foundAmount bool
-
-	for i := 1; i < len(flags); i++ {
-		if flags[i] == "--description" && len(flags) > i+1 {
-			desk = flags[i+1]
-			foundDesk = true
-		} else if flags[i] == "--amount" && len(flags) > i+1 {
-			amount, _ = strconv.ParseFloat(flags[i+1], 64)
-			foundAmount = true
-		}
-
+func AddCheckFlags(args []string) (string, float64, error) {
+	flags, err := ParseFlags(args)
+	if err != nil {
+		fmt.Println("incorrect arguments:", err)
+		return "", 0, err
 	}
 
-	if foundAmount && foundDesk {
-		return desk, amount
+	if err := ValidateFlags(flags, "--description", "--amount"); err != nil {
+		return "", 0, err
 	}
 
-	if foundAmount {
-		return "", amount
+	desk, exists := flags["--description"]
+	if !exists || strings.TrimSpace(desk) == "" {
+		return "", 0, fmt.Errorf("description is required")
 	}
 
-	if foundDesk {
-		return desk, 0
+	amountValue, exists := flags["--amount"]
+	if !exists {
+		return "", 0, fmt.Errorf("amount is required")
 	}
 
-	return "", 0
+	amount, err := strconv.ParseFloat(amountValue, 64)
+	if err != nil || amount < 0 {
+		return "", 0, fmt.Errorf("incorrect amount")
+	}
+
+	return desk, amount, nil
+
+	// amount := 0.0
+	// if value, exists := flags["--amount"]; exists {
+	// 	parsed, err := strconv.ParseFloat(value, 64)
+	// 	if err != nil || parsed < 0 {
+	// 		fmt.Println("incorrect amount")
+	// 		return "", 0, err
+
+	// 	}
+	// 	amount = parsed
+	// }
+
+	// if _, exists := flags["--amount"]; !exists {
+	// 	fmt.Println("amount is required")
+	// 	return "", 0, err
+	// }
+
+	// return desk, amount, nil
 }
